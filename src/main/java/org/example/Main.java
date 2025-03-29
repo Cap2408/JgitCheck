@@ -2,9 +2,13 @@ package org.example;
 
 import com.google.gson.Gson;
 import lombok.*;
+import org.eclipse.jgit.api.BlameCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.blame.BlameResult;
 import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,15 +40,34 @@ public class Main {
 //        HttpResponse<String> response = HttpClient.newBuilder().build().send(request, HttpResponse.BodyHandlers.ofString());
 //        System.out.println(gson.fromJson(response.body(), SampleResponseBody.class));
 
-        File repoPath = new File("C:\\Users\\Bharath\\IdeaProjects\\RemoteAPICallsTest\\JgitCheck");
+        File repoFile = new File("C:\\Users\\Bharath\\IdeaProjects\\RemoteAPICallsTest\\JgitCheck\\.git");
 
-        Git git = Git.init().setDirectory(repoPath).call();
-        System.out.println("Initialized repository at: " + git.getRepository().getDirectory());
+        Repository repository = new FileRepositoryBuilder()
+                .setGitDir(repoFile)
+                .readEnvironment()
+                .findGitDir()
+                .build();
 
-        DiffEntry diff = git.diff().call().get(0);
-        System.out.println(git.blame().call());
-        System.out.println(diff);
-        System.out.println(diff.getNewPath());
+        if (repository.resolve("HEAD") == null) {
+            System.out.println("No HEAD found! Ensure the repository has at least one commit.");
+            return;
+        }
+
+        Git git = new Git(repository);
+        BlameCommand blameCommand = git.blame();
+        blameCommand.setFilePath("src/main/java/org/example/Main.java");
+        BlameResult result = blameCommand.call();
+
+        if (result != null) {
+            System.out.println("Blame info for: src/Main.java");
+            for (int i = 0; i < result.getResultContents().size(); i++) {
+                System.out.println("Line " + (i + 1) + ": " +
+                        result.getSourceCommit(i).getAuthorIdent().getName());
+            }
+        } else {
+            System.out.println("Blame result is null. Check file path or repo state.");
+        }
+
     }
 
 }
